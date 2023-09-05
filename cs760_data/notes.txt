@@ -1,0 +1,5 @@
+Github: https://github.com/WongKinYiu/yolov7
+
+Inference (run from yolov7 root dir):
+
+python detect.py --weights yolov7.pt --conf 0.25 --img-size 640 --source cs760/data/<image.jpg>

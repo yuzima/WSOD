@@ -1,5 +1,44 @@
-Github: https://github.com/WongKinYiu/yolov7
+Argoverse download link: https://drive.google.com/file/d/1st9qW3BeIwQsnR0t8mRpvbsSWIo16ACi/view?usp=drive_link
+
+If your model requires formatting like normalization, see format_argo.py for an example of formatting for YOLOv7
 
 Inference (run from yolov7 root dir):
-
 python detect.py --weights yolov7.pt --conf 0.25 --img-size 640 --source cs760/data/<image.jpg>
+
+Train full argoverse (unfrozen) 50 epochs:
+python train.py --workers 8 --device 0 --batch-size 8 --data cs760_data/datasets/Argoverse/Argoverse.yaml --img 640 640 --cfg cs760_data/cfg/yolov7_argoverse.yaml --weights yolov7_training.pt --name full-argo-frozen --hyp data/hyp.scratch.custom.yaml --epochs 50
+
+Train full argoverse (frozen backbone + first 3 layers) 50 epochs:
+python train.py --workers 8 --device 0 --batch-size 8 --data cs760_data/datasets/Argoverse/Argoverse.yaml --img 640 640 --cfg cs760_data/cfg/yolov7_argoverse.yaml --weights yolov7_training.pt --name full-argo-frozen --hyp data/hyp.scratch.custom.yaml --epochs 50 --freeze 50 0 1 2
+
+Test full argoverse:
+python test.py --data cs760_data/datasets/Argoverse/Argoverse.yaml --img 640 --batch 8 --conf 0.001 --iou 0.65 --device 0 --weights cs760_data/weights/full-argo-frozen-best.pt --name full-argo-val --task test
+
+Issue with Argoverse dataset: bounding box labels are NOT supplied for the test set (the test set is to be used for a competition on this dataset, so correct labels aren't released).
+We need to make our own test set by taking images from train and val. It is important to keep 'scences' together, otherwise similar images from the same scene could pollute the test set.
+
+Our test set is constucted by moving these scences from train and val:
+
+Train -> Test:
+c6911883-1843-3727-8eaa-41dc8cda8993
+cd38ac0b-c5a6-3743-a148-f4f7b804ed17
+d4d9e91f-0f8e-334d-bd0e-0d062467308a
+d60558d2-d1aa-34ee-a902-e061e346e02a
+dcdcd8b3-0ba1-3218-b2ea-7bb965aad3f0
+de777454-df62-3d5a-a1ce-2edb5e5d4922
+e17eed4f-3ffd-3532-ab89-41a3f24cf226
+e8ce69b2-36ab-38e8-87a4-b9e20fee7fd2
+e9bb51af-1112-34c2-be3e-7ebe826649b4
+ebe7a98b-d383-343b-96d6-9e681e2c6a36
+f0826a9f-f46e-3c27-97af-87a77f7899cd
+f3fb839e-0aa2-342b-81c3-312b80be44f9
+fa0b626f-03df-35a0-8447-021088814b8b
+fb471bd6-7c81-3d93-ad12-ac54a28beb84
+ff78e1a3-6deb-34a4-9a1f-b85e34980f06
+
+Val -> Test:
+39556000-3955-3955-3955-039557148672
+e9a96218-365b-3ecd-a800-ed2c4c306c78
+cb0cba51-dfaf-34e9-a0c2-d931404c3dd8
+00c561b9-2057-358d-82c6-5b06d76cebcf
+64724064-6472-6472-6472-764725145600

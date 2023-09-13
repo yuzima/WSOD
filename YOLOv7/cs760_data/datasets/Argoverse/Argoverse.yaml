@@ -1,0 +1,9 @@
+train: cs760_data/datasets/Argoverse/Argoverse-1.1/images/train/ 
+val: cs760_data/datasets/Argoverse/Argoverse-1.1/images/val/ 
+test: cs760_data/datasets/Argoverse/Argoverse-1.1/images/test/ 
+
+# Classes
+nc: 8
+
+names: [ 'person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck', 'traffic_light', 'stop_sign']
+

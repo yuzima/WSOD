@@ -158,7 +158,7 @@ python tools/argoverse_test_set.py
 ## Train
 
 ```bash
-python tools/train.py config/wsod/wsddn_faster_rcnn_r50_argoverse.py --auto-scale-lr
+python tools/train.py config/wsod/wsddn_faster_rcnn_r50_argoverse.py
 ```
 Please refer to [Test existing models on standard datasets](./docs/en/user_guides/train.md) to get more information.
 

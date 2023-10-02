@@ -35,9 +35,9 @@ class WSDDNRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         self.bbox_roi_extractor.init_weights()
         self.bbox_head.init_weights()
 
-    def forward(self, 
-                      x: Tuple[Tensor],
-                      rpn_results_list: InstanceList,):
+    def forward(self,
+                x: Tuple[Tensor],
+                rpn_results_list: InstanceList):
         """Dummy forward function."""
         # bbox head
         results = ()
@@ -50,13 +50,15 @@ class WSDDNRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                                  bbox_results['bbox_pred'])
         return results
 
-    def loss(self, x: Tuple[Tensor], rpn_results_list: InstanceList,
+    def loss(self,
+             x: Tuple[Tensor],
+             rpn_results_list: InstanceList,
              batch_data_samples: SampleList):
         assert len(rpn_results_list) == len(batch_data_samples)
+
         outputs = unpack_gt_instances(batch_data_samples)
-        (batch_gt_instances, batch_gt_instances_ignore,
-         batch_img_metas) = outputs
-        
+        (batch_gt_instances, batch_gt_instances_ignore, batch_img_metas) = outputs
+
         gt_labels = [
             gt_instances.labels for gt_instances in batch_gt_instances
         ]
@@ -65,7 +67,7 @@ class WSDDNRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         # bbox head forward and loss
         bbox_results = self.bbox_loss(
             x, rpn_results_list, gt_labels, batch_img_metas)
-        losses.update(bbox_results['loss_bbox'])
+        losses.update(loss_wsddn=bbox_results['loss_bbox']['loss_wsddn'])
         return losses
 
     def bbox_loss(self, x, rpn_results_list, gt_labels, img_metas):
@@ -125,8 +127,6 @@ class WSDDNRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         proposals = [res.bboxes for res in rpn_results_list]
         rois = bbox2roi(proposals)
         bbox_results = self._bbox_forward(x, rois)
-        img_shapes = tuple(meta['img_shape'] for meta in batch_img_metas)
-        scale_factors = tuple(meta['scale_factor'] for meta in batch_img_metas)
 
         # split batch bbox prediction back to each image
         cls1 = bbox_results['cls1']
@@ -147,9 +147,8 @@ class WSDDNRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
                 cls1[i],
                 cls2[i],
                 bbox_pred[i],
-                img_shapes[i],
-                scale_factors[i],
-                rescale=rescale,
+                batch_img_metas[i],
+                rescale=False,
                 rcnn_test_cfg=rcnn_test_cfg)
             result_list.append(result)
         return result_list
@@ -164,7 +163,6 @@ class WSDDNRoIHead(BaseRoIHead, BBoxTestMixin, MaskTestMixin):
         batch_img_metas = [
             data_samples.metainfo for data_samples in batch_data_samples
         ]
-
         result_list = self.predict_bbox(
             x, batch_img_metas, rpn_results_list, self.test_cfg, rescale=rescale)
 

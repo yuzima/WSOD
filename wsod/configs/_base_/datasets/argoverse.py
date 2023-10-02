@@ -21,16 +21,14 @@ train_pipeline = [
 test_pipeline = [
     dict(type='LoadImageFromFile', backend_args=backend_args),
     dict(type='LoadAnnotations', with_bbox=True),
-    dict(type='Resize', scale=(1333, 800), keep_ratio=True),
-    dict(type='RandomFlip', prob=0.5),
+    # dict(type='Resize', scale=(1333, 800), keep_ratio=True),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='Pad', size_divisor=32),
-    # dict(type='ToTensor', keys=['gt_bboxes', 'gt_labels']),
     dict(
         type='PackDetInputs',
         meta_keys=('img_id', 'img_path', 'ori_shape', 'img_shape', 
-                   'pad_shape', 'flip', 'flip_direction', 'img_norm_cfg',
-                   'scale_factor'))
+                   'pad_shape', 'img_norm_cfg',
+                   ))
 ]
 
 train_dataloader = dict(
@@ -81,13 +79,11 @@ test_dataloader = dict(
 val_evaluator = dict(
     type='CocoMetric',
     ann_file=data_root + 'Argoverse-HD/annotations/val_new.json',
-    metric='bbox',
+    metric=['bbox'],
     format_only=False)
 
 test_evaluator = dict(
     type='CocoMetric',
     ann_file=data_root + 'Argoverse-HD/annotations/test.json',
-    metric='bbox',
+    metric=['bbox'],
     format_only=False)
-
-evaluation = dict(interval=1, metric=['mAP', 'bbox'], classwise=True)

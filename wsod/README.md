@@ -169,9 +169,9 @@ Remember to comment `load_from=` in `wsddn_faster_rcnn_r50_argoverse.py` before 
 Replace the `work_dirs/wsddn_faster_rcnn_r50_argoverse/epoch_2.pth` with the further trained or fully trained model weight when we have it.
 
 ```bash
-python tools/test.py config/wsod/wsddn_faster_rcnn_r50_argoverse.py work_dirs/wsddn_faster_rcnn_r50_argoverse/epoch_2.pth \
+python tools/test.py configs/wsod/wsddn_faster_rcnn_r50_argoverse.py work_dirs/wsddn_faster_rcnn_r50_argoverse/epoch_2.pth \
 --work-dir work_dirs/wsddn_faster_rcnn_r50_argoverse/ \
---show-dir work_dirs/wsddn_faster_rcnn_r50_argoverse/ \
+--show-dir work_dirs/wsddn_faster_rcnn_r50_argoverse/
 ```
 
 You can find the images with test result plotted in `work_dirs/wsddn_faster_rcnn_r50_argoverse/`

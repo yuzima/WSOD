@@ -2,12 +2,8 @@ _base_ = [
     # '../_base_/datasets/voc0712.py',
     # '../_base_/datasets/coco_detection.py',
     '../_base_/datasets/argoverse.py',
-    '../_base_/schedules/schedule_1x.py',
     '../_base_/default_runtime.py'
 ]
-
-# If you want to resume from the last trainning rather than start from begining, 
-# comment load_from and uncomment resume=True
 load_from = 'checkpoints/faster_rcnn/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth'
 # resume=True
 
@@ -29,6 +25,7 @@ model = dict(
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch',
+        # The ImageNet pretrained backbone to be loaded
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     neck=dict(
         type='FPN',
@@ -111,7 +108,7 @@ model = dict(
             min_bbox_size=0),
         rcnn=dict(
             score_thr=0.05,
-            nms=dict(type='nms', iou_threshold=0.5),
+            nms=dict(type='nms', iou_threshold=0.3),
             max_per_img=100)
         # soft-nms is also supported for rcnn testing
         # e.g., nms=dict(type='soft_nms', iou_threshold=0.5, min_score=0.05)
@@ -120,27 +117,15 @@ model = dict(
 work_dir = 'work_dirs/wsddn_faster_rcnn_r50_argoverse/'
 
 # optimizer
-# base_lr = 0.01
-optim_wrapper = dict(
-    type='OptimWrapper',
-    optimizer=dict(
-        type='SGD', 
-        lr=2e-6,
-        momentum=0.9, 
-        weight_decay=5e-4,
-        nesterov=True),
-    paramwise_cfg=dict(
-        bias_decay_mult=0.,
-        bias_lr_mult=2.,
-        custom_keys={
-            'refine': dict(lr_mult=10),
-        }),
-)
+# base_lr = 1e-2
 # optim_wrapper = dict(
+#     type='OptimWrapper',
 #     optimizer=dict(
-#         type='AdamW',
-#         lr=1e-5,
-#         weight_decay=0.0005,
+#         type='SGD',
+#         lr=5e-6,
+#         momentum=0.9,
+#         weight_decay=5e-4,
+#         nesterov=True
 #     ),
 #     paramwise_cfg=dict(
 #         bias_decay_mult=0.,
@@ -149,17 +134,41 @@ optim_wrapper = dict(
 #             'refine': dict(lr_mult=10),
 #         }),
 # )
+optim_wrapper = dict(
+    optimizer=dict(
+        type='AdamW',
+        lr=0.0001,
+        betas=(0.9, 0.999),
+        weight_decay=0.05,
+        eps=1e-08,
+    ),
+    paramwise_cfg=dict(
+        bias_decay_mult=0.,
+        bias_lr_mult=2.,
+        custom_keys={
+            'refine': dict(lr_mult=10),
+        }),
+)
 
 optimizer_config = dict(grad_clip=None)
 
-# learning policy
-lr_config = dict(
-    policy='step',
-    warmup='linear',
-    warmup_iters=500,
-    warmup_ratio=0.001,
-    step=[36])
-total_epochs = 64
+train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=20, val_interval=10)
+val_cfg = dict(type='ValLoop')
+test_cfg = dict(type='TestLoop')
+
+# learning rate
+param_scheduler = [
+    dict(
+        type='LinearLR', start_factor=0.001, by_epoch=False, begin=0, end=500),
+    dict(
+        type='MultiStepLR',
+        begin=0,
+        end=20,
+        by_epoch=True,
+        milestones=[10, 20],
+        gamma=0.1)
+]
+# auto_scale_lr = dict(enable=True, base_batch_size=16)
 
 checkpoint_config = dict(interval=16)
 
@@ -172,3 +181,7 @@ log_config = dict(
     ])
 # yapf:enable
 dist_params = dict(backend='nccl')
+
+visualization = _base_.default_hooks.visualization
+visualization.update(dict(draw=True, show=False, score_thr=0.1))
+

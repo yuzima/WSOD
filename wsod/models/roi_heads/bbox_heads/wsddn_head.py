@@ -1,13 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.runner import auto_fp16, force_fp32
 from torch.nn.modules.utils import _pair
 
 from mmdet.models.layers import multiclass_nms
 from mmdet.registry import MODELS
 from mmengine.structures import InstanceData
-
+from mmdet.structures.bbox import scale_boxes
 
 @MODELS.register_module()
 class WSDDNHead(nn.Module):
@@ -50,8 +49,21 @@ class WSDDNHead(nn.Module):
         nn.init.normal_(self.fc_cls2.weight, 0, 0.01)
         nn.init.constant_(self.fc_cls2.bias, 0)
 
-    @auto_fp16()
+    # @auto_fp16()
     def forward(self, x):
+        """Forward features from the upstream network.
+
+        Args:
+            x (tuple[Tensor]): Features from the upstream network, each is
+                a 4D-tensor.
+
+        Returns:
+            tuple: A tuple of classification scores and bbox prediction.
+
+                - cls1 (Tensor): Classification scores.
+                - cls2 (Tensor): Detection scores.
+        """
+
         x = x.view(x.size(0), -1)
         x = self.dropout1(F.relu(self.fc1(x)))
         x = self.dropout2(F.relu(self.fc2(x)))
@@ -59,7 +71,7 @@ class WSDDNHead(nn.Module):
         cls2 = self.fc_cls2(x)
         return cls1, cls2
 
-    @force_fp32(apply_to=('cls1', 'cls2'))
+    # @force_fp32(apply_to=('cls1', 'cls2'))
     def loss(self,
              cls1,
              cls2,
@@ -88,18 +100,19 @@ class WSDDNHead(nn.Module):
         if num_classes < labels.size(0):
             labels = torch.narrow(labels, 0, 0, num_classes)
 
-        losses = F.binary_cross_entropy(cls, labels.float(), reduction='sum')
+        loss_wsddn = F.binary_cross_entropy(cls, labels.float(), reduction='sum')
 
-        return dict(loss_bbox=losses)
+        losses = dict()
+        losses['loss_wsddn'] = loss_wsddn
+        return losses
 
-    @force_fp32(apply_to=('cls1', 'cls2'))
+    # @force_fp32(apply_to=('cls1', 'cls2'))
     def predict_by_feat(self,
                         rois,
                         cls1,
                         cls2,
                         bbox_pred,
-                        img_shape,
-                        scale_factor,
+                        img_meta, 
                         rescale=False,
                         rcnn_test_cfg=None) -> InstanceData:
 
@@ -110,6 +123,7 @@ class WSDDNHead(nn.Module):
         scores_pad = torch.zeros(
             (scores.shape[0], 1), dtype=torch.float32).to(device=scores.device)
         scores = torch.cat([scores, scores_pad], dim=1)
+        img_shape = img_meta['img_shape']
 
         if bbox_pred is not None:
             bboxes = self.bbox_coder.decode(
@@ -121,12 +135,9 @@ class WSDDNHead(nn.Module):
                 bboxes[:, [1, 3]].clamp_(min=0, max=img_shape[0])
 
         if rescale and bboxes.size(0) > 0:
-            if isinstance(scale_factor, float):
-                bboxes /= scale_factor
-            else:
-                scale_factor = bboxes.new_tensor(scale_factor).tile((2,))
-                bboxes = (bboxes.view(bboxes.size(0), -1, 4) /
-                          scale_factor).view(bboxes.size()[0], -1)
+            # assert img_meta.get('scale_factor') is not None
+            scale_factor = [1 / s for s in img_meta['scale_factor']]
+            bboxes = scale_boxes(bboxes, scale_factor)
 
         results = InstanceData()
         if rcnn_test_cfg is None:
